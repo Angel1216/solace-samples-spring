@@ -21,8 +21,6 @@ package com.solace.samples.spring.scs;
 
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -36,8 +34,6 @@ import reactor.util.function.Tuples;
 
 @SpringBootApplication
 public class ConvertFtoCProcessor {
-
-	private static final Logger log = LoggerFactory.getLogger(ConvertFtoCProcessor.class);
 
 	public static void main(String[] args) {
 		SpringApplication.run(ConvertFtoCProcessor.class, args);
@@ -71,8 +67,8 @@ public class ConvertFtoCProcessor {
 				return sensor;
 			}).log().subscribe();
 			
-			UnicastProcessor even = UnicastProcessor.create();
-			UnicastProcessor odd = UnicastProcessor.create();
+			UnicastProcessor<SensorReading> even = UnicastProcessor.create();
+			UnicastProcessor<SensorReading> odd = UnicastProcessor.create();
 			Flux<SensorReading> evenFlux = connectedFlux.filter(number -> number.getTemperature() > 0).doOnNext(number -> even.onNext(number));
 			Flux<SensorReading> oddFlux = connectedFlux.filter(number -> number.getTemperature() < 0).doOnNext(number -> odd.onNext(number));
 
