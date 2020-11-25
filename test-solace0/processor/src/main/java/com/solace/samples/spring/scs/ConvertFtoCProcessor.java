@@ -29,6 +29,11 @@ import org.springframework.context.annotation.Bean;
 
 import com.solace.samples.spring.common.SensorReading;
 
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.UnicastProcessor;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
+
 @SpringBootApplication
 public class ConvertFtoCProcessor {
 
@@ -38,18 +43,40 @@ public class ConvertFtoCProcessor {
 		SpringApplication.run(ConvertFtoCProcessor.class, args);
 	}
 
+//	@Bean
+//	public Function<SensorReading, SensorReading> convertFtoC() {
+//		return reading -> {
+//			log.info("Received: " + reading);
+//
+//			double temperatureCelsius = (reading.getTemperature().doubleValue() - 32) * 5 / 9;
+//			reading.setTemperature(temperatureCelsius);
+//			reading.setBaseUnit(SensorReading.BaseUnit.CELSIUS);
+//
+//			log.info("Sending: " + reading);
+//
+//			return reading;
+//		};
+//	}
+	
 	@Bean
-	public Function<SensorReading, SensorReading> convertFtoC() {
-		return reading -> {
-			log.info("Received: " + reading);
+	public static Function<Flux<SensorReading>, Tuple2<Flux<SensorReading>, Flux<SensorReading>>> convertFtoC() {
+		return flux -> {
+			
+			Flux<SensorReading> connectedFlux = flux.publish().autoConnect(2);
+			
+			connectedFlux.log().map(sensor -> {
+				double temperatureCelsius = (sensor.getTemperature().doubleValue() - 32) * 5 / 9;
+				sensor.setTemperature(temperatureCelsius);
+				sensor.setBaseUnit(SensorReading.BaseUnit.CELSIUS);
+				return sensor;
+			}).log().subscribe();
+			
+			UnicastProcessor even = UnicastProcessor.create();
+			UnicastProcessor odd = UnicastProcessor.create();
+			Flux<SensorReading> evenFlux = connectedFlux.filter(number -> number.getTemperature() > 0).doOnNext(number -> even.onNext(number));
+			Flux<SensorReading> oddFlux = connectedFlux.filter(number -> number.getTemperature() < 0).doOnNext(number -> odd.onNext(number));
 
-			double temperatureCelsius = (reading.getTemperature().doubleValue() - 32) * 5 / 9;
-			reading.setTemperature(temperatureCelsius);
-			reading.setBaseUnit(SensorReading.BaseUnit.CELSIUS);
-
-			log.info("Sending: " + reading);
-
-			return reading;
+			return Tuples.of(Flux.from(even).doOnSubscribe(x -> evenFlux.subscribe()), Flux.from(odd).doOnSubscribe(x -> oddFlux.subscribe()));
 		};
 	}
 }

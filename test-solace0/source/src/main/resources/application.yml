@@ -4,7 +4,7 @@ spring:
       definition: emitSensorReading
     stream:
       poller:
-        fixed-delay: 5000
+        fixed-delay: 10000
       bindings:
         emitSensorReading-out-0:
           destination: queue/a

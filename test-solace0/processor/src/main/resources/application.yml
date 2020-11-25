@@ -10,6 +10,8 @@ spring:
           group: PROCESSOR
         convertFtoC-out-0:
           destination: queue/b
+        convertFtoC-out-1:
+          destination: queue/c
       binders:
         local-solace:
           type: solace
